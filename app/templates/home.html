@@ -1,16 +1,50 @@
 {% extends "base.html" %}
-{% block title %}Home | Real Estate Platform{% endblock %}
+{% block title %}Home | Gurgaon Realty AI{% endblock %}
+
+{% block hero %}
+<section class="hero-section text-white">
+  <div class="container">
+    <div class="row align-items-center py-5">
+      <div class="col-lg-7">
+        <h1 class="display-5 fw-bold">Price your Gurgaon property with confidence</h1>
+        <p class="lead mt-3">Enter details and get instant AI-powered estimates in ₹ Crore / Lakh with a clean and intuitive interface.</p>
+        <div class="mt-4">
+          <a href="{{ url_for('prediction.predict') }}" class="btn btn-hero btn-lg me-3"><i class="bi bi-graph-up-arrow me-1"></i> Predict Price</a>
+          <a href="#" class="btn btn-outline-light btn-lg d-none d-sm-inline"><i class="bi bi-info-circle me-1"></i> Learn More</a>
+        </div>
+      </div>
+      <div class="col-lg-5 text-center mt-4 mt-lg-0">
+        <img class="hero-img" src="{{ url_for('static', filename='images/hero.png') }}" alt="Gurgaon skyline" onerror="this.style.display='none';">
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
 
 {% block content %}
-<div class="container text-center mt-5">
-  <h2 class="mb-3">🏙️ Real Estate Insights Platform</h2>
-  <p class="text-muted">Explore property data, predictions, and insights for Gurgaon.</p>
-
-  <div class="mt-4 d-flex justify-content-center gap-3">
-    <a href="/prediction" class="btn btn-primary">🏠 Price Predictor</a>
-    <a href="/recommendation" class="btn btn-outline-secondary">🏡 Recommendations</a>
-    <a href="/analytics" class="btn btn-outline-success">📊 Analytics</a>
-    <a href="/insights" class="btn btn-outline-info">💡 Insights</a>
+<section class="py-4">
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="feature-card">
+        <div class="icon"><i class="bi bi-cpu"></i></div>
+        <h5>Smart Ensemble</h5>
+        <p>Weighted blend of XGBoost + Random Forest, tuned via cross‑validated OOF blending.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="feature-card">
+        <div class="icon"><i class="bi bi-gear-wide-connected"></i></div>
+        <h5>Built‑in Preprocessing</h5>
+        <p>Encoders and scalers are baked into the pipeline. You just submit raw property details.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="feature-card">
+        <div class="icon"><i class="bi bi-shield-check"></i></div>
+        <h5>Reliable Metrics</h5>
+        <p>Validated with 10‑fold CV in log space, converted back to original price for display.</p>
+      </div>
+    </div>
   </div>
-</div>
+</section>
 {% endblock %}

@@ -1,18 +1,26 @@
-from flask import Blueprint, render_template, request
-import joblib, json
-import pandas as pd
+from flask import Blueprint, render_template, request, flash
+from ..utils.model_loader import get_model
+from ..utils.data_helper import form_to_dataframe, convert_crore_to_inr, format_price
 
 prediction_bp = Blueprint("prediction", __name__)
-model = joblib.load("Saved_Model/gurgaon_price_model.joblib")
-with open("Saved_Model/expected_columns.json", "r") as f:
-    expected_columns = json.load(f)
 
-@prediction_bp.route("/", methods=["GET", "POST"])
-def prediction():
-    prediction_result = None
+@prediction_bp.route("/predict", methods=["GET", "POST"])
+def predict():
+    result = None
     if request.method == "POST":
-        form_data = request.form.to_dict()
-        df = pd.DataFrame([form_data])
-        df = df.reindex(columns=expected_columns, fill_value=0)
-        prediction_result = round(model.predict(df)[0], 2)
-    return render_template("prediction.html", prediction=prediction_result)
+        try:
+            df = form_to_dataframe(request.form.to_dict())
+            model = get_model()
+            y_crore = float(model.predict(df)[0])   # model predicts crore
+            amount_in_inr = convert_crore_to_inr(y_crore)
+            fp = format_price(amount_in_inr)
+
+            result = {
+                "display": fp["main"],  # e.g., ₹1.14 Cr
+                "breakdown": {"inr": fp["inr"], "lakh": fp["lakh"], "crore": fp["crore"]},
+                "raw": y_crore,  # show raw crore for debugging
+            }
+        except Exception as e:
+            flash(f"Prediction failed: {e}", "danger")
+
+    return render_template("prediction.html", result=result)
