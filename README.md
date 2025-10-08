@@ -40,10 +40,6 @@
 │   ├── app
 │   │   └── static
 │   │       └── exports
-│   │           ├── correlation_matrix.csv
-│   │           ├── feature_text.pkl
-│   │           ├── gurgaon_cleaned_data.csv
-│   │           └── sector_summary.csv
 │   └── outliers_and_Missing_Value_Handle
 │       ├── missing-value-imputation.ipynb
 │       └── outlier-treatment.ipynb
@@ -66,6 +62,12 @@
 │   ├── static
 │   │   ├── css
 │   │   │   └── style.css
+│   │   ├── exports
+│   │   │   ├── correlation_matrix.csv
+│   │   │   ├── data_viz1.csv
+│   │   │   ├── feature_text.pkl
+│   │   │   ├── gurgaon_cleaned_data.csv
+│   │   │   └── sector_summary.csv
 │   │   ├── images
 │   │   └── js
 │   │       └── main.js
@@ -82,6 +84,10 @@
 │       ├── model_loader.py
 │       └── recommendation_engine.py
 ├── create_flask_structure.py
+├── exported_data
+│   ├── data_viz_full.csv
+│   ├── grouped_sector_data.csv
+│   └── sector_feature_map.pkl
 ├── generate_tree.py
 ├── requirements.txt
 └── run.py

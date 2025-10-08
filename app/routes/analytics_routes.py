@@ -1,4 +1,3 @@
-# app/routes/analytics_routes.py
 from flask import Blueprint, render_template, flash
 from ..utils.analytics_loader import build_figures, build_wordcloud_base64
 

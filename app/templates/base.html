@@ -21,7 +21,12 @@
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item"><a class="nav-link" href="{{ url_for('home.home') }}">Home</a></li>
-          <li class="nav-item ms-2"><a class="btn btn-light text-primary" href="{{ url_for('prediction.predict') }}"><i class="bi bi-cash-coin me-1"></i> Predict</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('analytics.analytics') }}">Analytics</a></li>
+          <li class="nav-item ms-2">
+            <a class="btn btn-light text-primary" href="{{ url_for('prediction.predict') }}">
+              <i class="bi bi-cash-coin me-1"></i> Predict
+            </a>
+          </li>
         </ul>
       </div>
     </div>
@@ -45,7 +50,7 @@
 
   <footer class="footer text-center text-white-50 py-3">
     <div class="container">
-      <small>© {{ 2025 }} Gurgaon Realty AI — Accurate prices with XGBoost + Random Forest</small>
+      <small>© 2025 Gurgaon Realty AI — Accurate prices with XGBoost + Random Forest</small>
     </div>
   </footer>
 
