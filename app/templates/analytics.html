@@ -1,92 +1,127 @@
 {% extends "base.html" %}
-{% block title %}Analytics | Gurgaon Realty AI{% endblock %}
+{% block title %}Analytics · Gurgaon Realty AI{% endblock %}
 
 {% block content %}
-<link rel="preload" as="script" href="https://cdn.plot.ly/plotly-2.27.0.min.js">
-<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-
-<div class="row g-4">
-
-  <div class="col-12">
-    <div class="chart-card p-3">
-      <h4 class="mb-3"><i class="bi bi-geo-alt-fill text-primary me-2"></i>Sector Map: Avg Price per Sqft</h4>
-      <div id="map_sector" style="height:520px;"></div>
-    </div>
-  </div>
-
-  <div class="col-lg-6">
-    <div class="chart-card p-3">
-      <h5 class="mb-2">Built-up Area vs Price (BHK colored)</h5>
-      <div id="scatter_area_price"></div>
-    </div>
-  </div>
-
-  <div class="col-lg-6">
-    <div class="chart-card p-3">
-      <h5 class="mb-2">BHK Distribution</h5>
-      <div id="pie_bhk"></div>
-    </div>
-  </div>
-
-  <div class="col-lg-6">
-    <div class="chart-card p-3">
-      <h5 class="mb-2">Price Range by BHK (≤ 4 BHK)</h5>
-      <div id="box_bhk_price"></div>
-    </div>
-  </div>
-
-  <div class="col-lg-6">
-    <div class="chart-card p-3">
-      <h5 class="mb-2">Price Distribution by Property Type</h5>
-      <div id="hist_price_type"></div>
-    </div>
-  </div>
-
-  <div class="col-lg-6">
-    <div class="chart-card p-3">
-      <h5 class="mb-2">Composition: Property Type → BHK</h5>
-      <div id="sunburst_type_bhk"></div>
-    </div>
-  </div>
-
-  <div class="col-lg-6">
-    <div class="chart-card p-3">
-      <h5 class="mb-2">Top Sectors by Avg Price per Sqft</h5>
-      <div id="bar_top_sectors_pps"></div>
-    </div>
-  </div>
-
-  <div class="col-12">
-    <div class="chart-card p-3">
-      <h5 class="mb-2">Correlation Matrix</h5>
-      <div id="heatmap_corr"></div>
-    </div>
-  </div>
-
-  {% if wc_b64 %}
-  <div class="col-12">
-    <div class="chart-card p-3">
-      <h5 class="mb-2">Most Common Features (Wordcloud)</h5>
-      <img src="data:image/png;base64,{{ wc_b64 }}" class="img-fluid rounded" alt="Wordcloud">
-    </div>
-  </div>
-  {% endif %}
-
+<div class="d-flex align-items-center mb-3">
+  <h2 class="mb-0 me-3">🏙 Gurgaon Property Analytics</h2>
+  <span class="text-muted">Interactive map, distributions, and sector insights</span>
 </div>
 
-<script>
-  const charts = {{ charts|tojson|safe }};
+<div class="row g-4">
+  <!-- Map -->
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-header fw-semibold">Average Price per Sqft by Sector (Map)</div>
+      <div class="card-body">
+        {{ map_html | safe }}
+      </div>
+    </div>
+  </div>
 
-  function render(id){
-    if(charts[id]){
-      Plotly.newPlot(id, charts[id].data, charts[id].layout || {}, {responsive: true});
-    } else {
-      const el = document.getElementById(id);
-      if(el) el.innerHTML = '<div class="text-muted">Chart not available.</div>';
-    }
-  }
+  <!-- Scatter & Box -->
+  <div class="col-lg-8 col-12">
+    <div class="card shadow-sm h-100">
+      <div class="card-header fw-semibold">Built-up Area vs Price</div>
+      <div class="card-body">
+        {{ scatter_html | safe }}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4 col-12">
+    <div class="card shadow-sm h-100">
+      <div class="card-header fw-semibold">BHK-wise Price Distribution</div>
+      <div class="card-body">
+        {{ box_html | safe }}
+      </div>
+    </div>
+  </div>
 
-  ["map_sector","scatter_area_price","pie_bhk","box_bhk_price","hist_price_type",
-   "sunburst_type_bhk","bar_top_sectors_pps","heatmap_corr"].forEach(render);
-</script>
+  <!-- Pie & WordCloud -->
+  <div class="col-lg-6 col-12">
+    <div class="card shadow-sm h-100">
+      <div class="card-header fw-semibold">Bedroom Distribution</div>
+      <div class="card-body">
+        {{ pie_html | safe }}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6 col-12">
+    <div class="card shadow-sm h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">Sector WordCloud</span>
+        <form method="GET" action="{{ url_for('analytics.analytics') }}" class="d-flex align-items-center">
+          <label class="me-2 mb-0">Sector:</label>
+          <select name="sector" class="form-select form-select-sm" onchange="this.form.submit()">
+            {% for s in sectors %}
+              <option value="{{ s }}" {% if s == selected_sector %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
+      <div class="card-body d-flex justify-content-center align-items-center">
+        {% if wordcloud_image_data %}
+          <img src="data:image/png;base64,{{ wordcloud_image_data }}" class="img-fluid rounded border" alt="WordCloud for {{ selected_sector }}">
+        {% else %}
+          <div class="alert alert-info mb-0">No WordCloud data available.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- New: Distribution + Violin -->
+  <div class="col-lg-6 col-12">
+    <div class="card shadow-sm h-100">
+      <div class="card-header fw-semibold">Price per Sqft Distribution</div>
+      <div class="card-body">
+        {{ hist_psf_html | safe }}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6 col-12">
+    <div class="card shadow-sm h-100">
+      <div class="card-header fw-semibold">PSF by BHK (Violin)</div>
+      <div class="card-body">
+        {{ violin_bhk_psf_html | safe }}
+      </div>
+    </div>
+  </div>
+
+  <!-- New: Top Sectors by PSF -->
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-header fw-semibold">Top Sectors by Avg PSF</div>
+      <div class="card-body">
+        {{ sector_bar_psf_html | safe }}
+      </div>
+    </div>
+  </div>
+
+  <!-- New: Efficiency & Features -->
+  <div class="col-lg-6 col-12">
+    <div class="card shadow-sm h-100">
+      <div class="card-header fw-semibold">Built-up Area vs Price per Sqft</div>
+      <div class="card-body">
+        {{ area_psf_scatter_html | safe }}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6 col-12">
+    <div class="card shadow-sm h-100">
+      <div class="card-header fw-semibold">Luxury Score vs Price per Sqft</div>
+      <div class="card-body">
+        {{ luxury_psf_scatter_html | safe }}
+      </div>
+    </div>
+  </div>
+
+  <!-- New: Correlation Heatmap -->
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-header fw-semibold">Feature Correlations</div>
+      <div class="card-body">
+        {{ corr_heatmap_html | safe }}
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

@@ -1,310 +1,342 @@
 # app/utils/analytics_loader.py
+
 from __future__ import annotations
-import json
+
+import io
+import base64
 from pathlib import Path
-from typing import Dict, Optional, List
+from typing import Dict, Tuple, List
 
 import pandas as pd
-import numpy as np
 import plotly.express as px
-import plotly.io as pio
+from flask import current_app
 
-# Optional wordcloud
-try:
-    from wordcloud import WordCloud
-    WORDCLOUD = True
-except Exception:
-    WORDCLOUD = False
+# Headless matplotlib for servers
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-# We’ll search these directories in order
-EXPORTS_CANDIDATES = [
-    PROJECT_ROOT / "app" / "static" / "exports",
-    PROJECT_ROOT / "Notebooks" / "app" / "static" / "exports",
-    PROJECT_ROOT / "app" / "static" / "analytics",  # older path variant
-]
-DATA_DIR = PROJECT_ROOT / "Dataset"
 
-def _existing_dirs(paths: List[Path]) -> List[Path]:
-    return [p for p in paths if p.exists()]
-
-def _read_csv_any(name: str) -> Optional[pd.DataFrame]:
-    for base in _existing_dirs(EXPORTS_CANDIDATES):
-        p = base / name
+def _resolve_data_file(filename: str) -> Path:
+    """
+    Look for files in:
+      1) app/static/exports/{filename}
+      2) exported_data/{filename}
+    """
+    app_root = Path(current_app.root_path)  # .../app
+    candidates = [
+        app_root / "static" / "exports" / filename,
+        app_root.parent / "exported_data" / filename,
+    ]
+    for p in candidates:
         if p.exists():
-            try:
-                return pd.read_csv(p)
-            except Exception:
-                try:
-                    return pd.read_excel(p)
-                except Exception:
-                    pass
-    return None
+            return p.resolve()
+    raise FileNotFoundError(f"Could not find {filename} in: {', '.join(str(c) for c in candidates)}")
 
-def _read_pickle_text_any(name: str) -> Optional[str]:
+
+def load_visualization_data() -> Tuple[pd.DataFrame, pd.DataFrame, Dict[str, str]]:
+    """
+    Your files and columns:
+    - grouped_sector_data.csv (map):
+        sector, price, price_per_sqft, built_up_area, latitude, longitude
+    - data_viz_full.csv (plots):
+        property_type, sector, society, price, price_per_sqft, bedRoom, built_up_area,
+        bathroom, balcony, floorNum, facing, agePossession, luxury_score, latitude, longitude, ...
+    - sector_feature_map.pkl (wordcloud)
+    """
+    df_path = _resolve_data_file("data_viz_full.csv")
+    grouped_path = _resolve_data_file("grouped_sector_data.csv")
+    sector_map_path = _resolve_data_file("sector_feature_map.pkl")
+
+    # Load
+    df = pd.read_csv(df_path, encoding="utf-8-sig")
+    group_df = pd.read_csv(grouped_path, encoding="utf-8-sig")
+
     import pickle
-    for base in _existing_dirs(EXPORTS_CANDIDATES + [PROJECT_ROOT / "Saved_Model"]):
-        p = base / name
-        if p.exists():
-            try:
-                obj = pickle.load(open(p, "rb"))
-                return obj if isinstance(obj, str) else str(obj)
-            except Exception:
-                pass
-    return None
+    with open(sector_map_path, "rb") as f:
+        sector_feature_map = pickle.load(f)
 
-# ---------- column synonym helpers ----------
-def find_col(columns: List[str], candidates: List[str]) -> Optional[str]:
-    cols_lower = {c.lower(): c for c in columns}
-    for cand in candidates:
-        if cand in cols_lower:
-            return cols_lower[cand]
-    norm = {c.lower().replace(" ", "").replace("_", ""): c for c in columns}
-    for cand in candidates:
-        k = cand.replace(" ", "").replace("_", "")
-        if k in norm:
-            return norm[k]
-    return None
+    # Coerce only what we need
+    for col in [
+        "built_up_area",
+        "price",
+        "bedRoom",
+        "price_per_sqft",
+        "bathroom",
+        "balcony",
+        "floorNum",
+        "luxury_score",
+    ]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
-def get_cols(df: pd.DataFrame, role: str) -> Optional[str]:
-    synonyms = {
-        "sector": ["sector", "sector_name", "area", "location"],
-        "lat": ["latitude", "lat", "lat_deg"],
-        "lon": ["longitude", "lon", "lng", "long", "lon_deg"],
-        "price": ["price", "final_price", "price_in_inr", "priceinr", "price_crore", "pricecrore"],
-        "pps": ["price_per_sqft", "pricepersqft", "price_per_sqfeet", "pps", "avg_pps", "avg_price_per_sqft", "ppsf"],
-        "area": ["built_up_area", "builtup_area", "area", "sqft", "carpet_area", "super_area"],
-        "bhk": ["bedRoom", "bedroom", "bhk", "BHK", "rooms"],
-        "ptype": ["property_type", "type", "propertyType", "property"],
+    for col in ["latitude", "longitude", "price_per_sqft", "built_up_area", "price"]:
+        if col in group_df.columns:
+            group_df[col] = pd.to_numeric(group_df[col], errors="coerce")
+
+    return df, group_df, sector_feature_map
+
+
+def _fig_to_html(fig) -> str:
+    # Include Plotly per figure to avoid any script-order issues
+    return fig.to_html(full_html=False, include_plotlyjs="cdn")
+
+
+# Existing figures
+def build_scatter_map(group_df: pd.DataFrame) -> str:
+    required = ["latitude", "longitude", "price_per_sqft"]
+    if group_df.empty or not all(c in group_df.columns for c in required):
+        return "<div class='alert alert-info mb-0'>No map data available.</div>"
+
+    fig = px.scatter_mapbox(
+        group_df,
+        lat="latitude",
+        lon="longitude",
+        color="price_per_sqft",
+        size="built_up_area" if "built_up_area" in group_df.columns else None,
+        hover_name="sector" if "sector" in group_df.columns else None,
+        color_continuous_scale=px.colors.cyclical.IceFire,
+        zoom=10,
+        mapbox_style="open-street-map",
+        title="Average Price per Sqft by Sector",
+    )
+    fig.update_layout(height=520, margin=dict(l=0, r=0, t=40, b=0))
+    return _fig_to_html(fig)
+
+
+def build_scatter_plot(df: pd.DataFrame) -> str:
+    if not {"built_up_area", "price"}.issubset(df.columns):
+        return "<div class='alert alert-warning mb-0'>Missing built_up_area or price in data_viz_full.csv</div>"
+    sub = df.dropna(subset=["built_up_area", "price"])
+    if sub.empty:
+        return "<div class='alert alert-info mb-0'>No rows for scatter (built_up_area & price).</div>"
+
+    fig = px.scatter(
+        sub,
+        x="built_up_area",
+        y="price",
+        color="bedRoom" if "bedRoom" in sub.columns else None,
+        labels={"built_up_area": "Built-up Area (sqft)", "price": "Price (Cr)"},
+        title="Built-up Area vs Price",
+        opacity=0.8,
+    )
+    fig.update_layout(height=420, margin=dict(l=10, r=10, t=50, b=10))
+    return _fig_to_html(fig)
+
+
+def build_box_plot(df: pd.DataFrame) -> str:
+    if not {"bedRoom", "price"}.issubset(df.columns):
+        return "<div class='alert alert-warning mb-0'>Missing bedRoom or price in data_viz_full.csv</div>"
+    sub = df.dropna(subset=["bedRoom", "price"])
+    if sub.empty:
+        return "<div class='alert alert-info mb-0'>No rows for BHK-wise price distribution.</div>"
+    sub = sub[sub["bedRoom"] <= 8]
+
+    fig = px.box(
+        sub,
+        x="bedRoom",
+        y="price",
+        points="outliers",
+        labels={"bedRoom": "BHK", "price": "Price (Cr)"},
+        title="BHK-wise Price Distribution",
+    )
+    fig.update_layout(height=420, margin=dict(l=10, r=10, t=50, b=10))
+    return _fig_to_html(fig)
+
+
+def build_pie_chart(df: pd.DataFrame) -> str:
+    if "bedRoom" not in df.columns:
+        return "<div class='alert alert-warning mb-0'>Missing bedRoom in data_viz_full.csv</div>"
+    sub = df.dropna(subset=["bedRoom"]).copy()
+    if sub.empty:
+        return "<div class='alert alert-info mb-0'>No rows for bedroom distribution.</div>"
+    sub["bedRoom"] = sub["bedRoom"].astype(int)
+    agg = sub.groupby("bedRoom").size().reset_index(name="count").sort_values("bedRoom")
+
+    fig = px.pie(
+        agg,
+        names="bedRoom",
+        values="count",
+        title="Bedroom Distribution",
+        hole=0.35,
+    )
+    fig.update_layout(height=400, margin=dict(l=10, r=10, t=50, b=10))
+    return _fig_to_html(fig)
+
+
+# New insights
+def build_hist_price_psf(df: pd.DataFrame) -> str:
+    if "price_per_sqft" not in df.columns:
+        return "<div class='alert alert-warning mb-0'>Missing price_per_sqft in data_viz_full.csv</div>"
+    sub = df.dropna(subset=["price_per_sqft"])
+    if sub.empty:
+        return "<div class='alert alert-info mb-0'>No data for price per sqft distribution.</div>"
+
+    fig = px.histogram(
+        sub,
+        x="price_per_sqft",
+        nbins=50,
+        color="property_type" if "property_type" in sub.columns else None,
+        marginal="box",
+        title="Price per Sqft Distribution",
+        labels={"price_per_sqft": "Price per Sqft (₹)"},
+        opacity=0.85,
+    )
+    fig.update_layout(height=420, margin=dict(l=10, r=10, t=50, b=10))
+    return _fig_to_html(fig)
+
+
+def build_sector_bar_psf(group_df: pd.DataFrame, top_n: int = 15) -> str:
+    req = ["sector", "price_per_sqft"]
+    if group_df.empty or not all(c in group_df.columns for c in req):
+        return "<div class='alert alert-info mb-0'>No sector PSF data available.</div>"
+
+    sub = group_df.dropna(subset=req)
+    if sub.empty:
+        return "<div class='alert alert-info mb-0'>No sector PSF data available after cleaning.</div>"
+
+    # Top N sectors by PSF
+    top = sub.sort_values("price_per_sqft", ascending=False).head(top_n)
+
+    fig = px.bar(
+        top,
+        x="sector",
+        y="price_per_sqft",
+        title=f"Top {len(top)} Sectors by Avg Price per Sqft",
+        labels={"price_per_sqft": "Avg PSF (₹)", "sector": "Sector"},
+    )
+    fig.update_layout(height=420, xaxis_tickangle=-35, margin=dict(l=10, r=10, t=50, b=100))
+    return _fig_to_html(fig)
+
+
+def build_violin_bhk_psf(df: pd.DataFrame) -> str:
+    req = ["bedRoom", "price_per_sqft"]
+    if not all(c in df.columns for c in req):
+        return "<div class='alert alert-warning mb-0'>Requires bedRoom and price_per_sqft.</div>"
+    sub = df.dropna(subset=req)
+    if sub.empty:
+        return "<div class='alert alert-info mb-0'>No data for PSF by BHK.</div>"
+    sub = sub[sub["bedRoom"] <= 8]
+
+    fig = px.violin(
+        sub,
+        x="bedRoom",
+        y="price_per_sqft",
+        box=True,
+        points="outliers",
+        title="Price per Sqft by BHK (Violin)",
+        labels={"bedRoom": "BHK", "price_per_sqft": "PSF (₹)"},
+    )
+    fig.update_layout(height=420, margin=dict(l=10, r=10, t=50, b=10))
+    return _fig_to_html(fig)
+
+
+def build_area_psf_scatter(df: pd.DataFrame) -> str:
+    req = ["built_up_area", "price_per_sqft"]
+    if not all(c in df.columns for c in req):
+        return "<div class='alert alert-warning mb-0'>Requires built_up_area and price_per_sqft.</div>"
+    sub = df.dropna(subset=req)
+    if sub.empty:
+        return "<div class='alert alert-info mb-0'>No data for area vs PSF.</div>"
+
+    fig = px.scatter(
+        sub,
+        x="built_up_area",
+        y="price_per_sqft",
+        color="bedRoom" if "bedRoom" in sub.columns else None,
+        hover_name="society" if "society" in sub.columns else None,
+        title="Built-up Area vs Price per Sqft",
+        labels={"built_up_area": "Built-up Area (sqft)", "price_per_sqft": "PSF (₹)"},
+        opacity=0.75,
+    )
+    fig.update_layout(height=420, margin=dict(l=10, r=10, t=50, b=10))
+    return _fig_to_html(fig)
+
+
+def build_luxury_psf_scatter(df: pd.DataFrame) -> str:
+    req = ["luxury_score", "price_per_sqft"]
+    if not all(c in df.columns for c in req):
+        return "<div class='alert alert-warning mb-0'>Requires luxury_score and price_per_sqft.</div>"
+    sub = df.dropna(subset=req)
+    if sub.empty:
+        return "<div class='alert alert-info mb-0'>No data for luxury vs PSF.</div>"
+
+    fig = px.scatter(
+        sub,
+        x="luxury_score",
+        y="price_per_sqft",
+        color="property_type" if "property_type" in sub.columns else None,
+        title="Luxury Score vs Price per Sqft",
+        labels={"luxury_score": "Luxury Score", "price_per_sqft": "PSF (₹)"},
+        opacity=0.75,
+    )
+    fig.update_layout(height=420, margin=dict(l=10, r=10, t=50, b=10))
+    return _fig_to_html(fig)
+
+
+def build_corr_heatmap(df: pd.DataFrame) -> str:
+    # Focus on the most relevant numeric columns to keep the heatmap readable
+    cols = [c for c in [
+        "built_up_area", "price", "price_per_sqft", "bedRoom",
+        "bathroom", "balcony", "floorNum", "luxury_score"
+    ] if c in df.columns]
+    if not cols:
+        return "<div class='alert alert-warning mb-0'>No numeric columns available for correlation.</div>"
+
+    sub = df[cols].copy()
+    sub = sub.dropna(how="all")
+    if sub.empty:
+        return "<div class='alert alert-info mb-0'>No data for correlation heatmap.</div>"
+
+    corr = sub.corr(numeric_only=True)
+    fig = px.imshow(
+        corr,
+        text_auto=True,
+        color_continuous_scale="RdBu",
+        zmin=-1, zmax=1,
+        aspect="auto",
+        title="Feature Correlation Heatmap",
+    )
+    fig.update_layout(height=520, margin=dict(l=10, r=10, t=50, b=10))
+    return _fig_to_html(fig)
+
+
+def build_all_figures(df: pd.DataFrame, group_df: pd.DataFrame) -> Dict[str, str]:
+    return {
+        # Existing
+        "map_html": build_scatter_map(group_df),
+        "scatter_html": build_scatter_plot(df),
+        "box_html": build_box_plot(df),
+        "pie_html": build_pie_chart(df),
+        # New insights
+        "hist_psf_html": build_hist_price_psf(df),
+        "sector_bar_psf_html": build_sector_bar_psf(group_df),
+        "violin_bhk_psf_html": build_violin_bhk_psf(df),
+        "area_psf_scatter_html": build_area_psf_scatter(df),
+        "luxury_psf_scatter_html": build_luxury_psf_scatter(df),
+        "corr_heatmap_html": build_corr_heatmap(df),
     }
-    return find_col(list(df.columns), synonyms[role])
 
-def to_num(s: pd.Series) -> pd.Series:
-    return pd.to_numeric(s, errors="coerce")
 
-def clip99(s: pd.Series) -> pd.Series:
-    s = to_num(s)
-    if s.isna().all():
-        return s
-    return s.clip(upper=float(s.quantile(0.99)))
+def get_sector_options(sector_feature_map: Dict[str, str], df: pd.DataFrame | None = None) -> List[str]:
+    sectors = list(sector_feature_map.keys()) if sector_feature_map else []
+    if not sectors and df is not None and "sector" in df.columns:
+        sectors = sorted(df["sector"].dropna().astype(str).unique().tolist())
+    return sorted(sectors)
 
-# ---------- sector summary fallback if file missing ----------
-def _parse_latlon(df_lat: pd.DataFrame) -> pd.DataFrame:
-    import re
-    def _parse(s):
-        if pd.isna(s):
-            return np.nan, np.nan
-        s_raw = str(s)
-        s_clean = s_raw.replace("°", "")
-        nums = re.findall(r"[-+]?\d*\.\d+|[-+]?\d+", s_clean)
-        lat = float(nums[0]) if len(nums) > 0 else np.nan
-        lon = float(nums[1]) if len(nums) > 1 else np.nan
-        if "S" in s_raw.upper():
-            lat = -abs(lat)
-        if "W" in s_raw.upper():
-            lon = -abs(lon)
-        return lat, lon
 
-    if "coordinates" in df_lat.columns:
-        lat, lon = zip(*df_lat["coordinates"].apply(_parse))
-        df_lat["latitude"] = lat
-        df_lat["longitude"] = lon
-    return df_lat
-
-def compute_sector_summary_from_dataset(df_clean: pd.DataFrame) -> Optional[pd.DataFrame]:
-    lat_file = DATA_DIR / "latlong.csv"
-    if not lat_file.exists():
-        return None
-    try:
-        latlong = pd.read_csv(lat_file)
-        latlong = _parse_latlon(latlong)
-        sec_col = get_cols(df_clean, "sector")
-        if sec_col is None:
-            return None
-        merged = df_clean.merge(
-            latlong[["sector", "latitude", "longitude"]],
-            left_on=sec_col, right_on="sector", how="left"
-        )
-        for c in ["price", "price_per_sqft", "built_up_area", "latitude", "longitude"]:
-            if c in merged.columns:
-                merged[c] = to_num(merged[c])
-        group = merged.groupby("sector", as_index=False).agg(
-            latitude=("latitude", "mean"),
-            longitude=("longitude", "mean"),
-            avg_price=("price", "mean") if "price" in merged.columns else ("latitude", "size"),
-            avg_pps=("price_per_sqft", "mean") if "price_per_sqft" in merged.columns else ("latitude", "size"),
-            avg_area=("built_up_area", "mean") if "built_up_area" in merged.columns else ("latitude", "size"),
-            listings=("sector", "size"),
-        )
-        return group.dropna(subset=["latitude", "longitude"])
-    except Exception:
-        return None
-
-# ---------- load dataframes ----------
-def load_dataframes() -> Dict[str, Optional[pd.DataFrame]]:
-    clean = _read_csv_any("gurgaon_cleaned_data.csv")
-    # If not provided, try dataset default
-    if clean is None:
-        dataset_file = DATA_DIR / "gurgaon_properties_missing_value_imputation.csv"
-        if dataset_file.exists():
-            clean = pd.read_csv(dataset_file)
-
-    sector = _read_csv_any("sector_summary.csv")
-    corr = _read_csv_any("correlation_matrix.csv")
-
-    # Fallback sector summary if file missing
-    if sector is None and clean is not None:
-        sector = compute_sector_summary_from_dataset(clean)
-
-    return {"clean": clean, "sector": sector, "corr": corr}
-
-# ---------- figures ----------
-def build_figures() -> Dict[str, dict]:
-    dfs = load_dataframes()
-    df = dfs["clean"]
-    sector = dfs["sector"]
-    corr = dfs["corr"]
-
-    charts: Dict[str, dict] = {}
-
-    # 1) Sector map
-    if sector is not None and len(sector):
-        lat = get_cols(sector, "lat")
-        lon = get_cols(sector, "lon")
-        sec = get_cols(sector, "sector") or ("sector" if "sector" in sector.columns else None)
-        color = get_cols(sector, "pps") or get_cols(sector, "price")
-        size = get_cols(sector, "area")
-        if lat and lon:
-            for c in [lat, lon, color, size]:
-                if c and c in sector.columns:
-                    sector[c] = to_num(sector[c])
-            fig = px.scatter_mapbox(
-                sector.dropna(subset=[lat, lon]),
-                lat=lat, lon=lon,
-                color=color if color else None,
-                size=size if size else None,
-                size_max=28,
-                color_continuous_scale=px.colors.cyclical.IceFire,
-                zoom=10,
-                mapbox_style="open-street-map",
-                hover_name=sec if sec else None,
-                title="Average Price per Sqft by Sector",
-                height=520
-            )
-            charts["map_sector"] = json.loads(pio.to_json(fig))
-
-    if df is None or not len(df):
-        return charts
-
-    price = get_cols(df, "price")
-    area = get_cols(df, "area")
-    bhk = get_cols(df, "bhk")
-    ptype = get_cols(df, "ptype")
-    pps = get_cols(df, "pps")
-    sec = get_cols(df, "sector")
-
-    # 2) Scatter: Area vs Price
-    if area and price and bhk:
-        tmp = df.dropna(subset=[area, price, bhk]).copy()
-        if len(tmp) > 6000:
-            tmp = tmp.sample(6000, random_state=42)
-        tmp[price] = clip99(tmp[price])
-        tmp[bhk] = to_num(tmp[bhk]).astype("Int64").astype(str)
-        fig = px.scatter(tmp, x=area, y=price, color=bhk,
-                         labels={"color": "BHK"}, title="Built-up Area vs Price", height=480)
-        charts["scatter_area_price"] = json.loads(pio.to_json(fig))
-
-    # 3) Pie: BHK distribution
-    if bhk:
-        vc = to_num(df[bhk]).dropna().astype(int).value_counts().reset_index()
-        if len(vc):
-            vc.columns = ["BHK", "count"]
-            fig = px.pie(vc, names="BHK", values="count", title="BHK Distribution", height=420)
-            charts["pie_bhk"] = json.loads(pio.to_json(fig))
-
-    # 4) Box: Price range by BHK (≤ 4)
-    if bhk and price:
-        bx = df.copy()
-        bx[bhk] = to_num(bx[bhk])
-        bx = bx[bx[bhk] <= 4].dropna(subset=[bhk, price])
-        if len(bx):
-            bx[bhk] = bx[bhk].astype(int).astype(str)
-            bx[price] = clip99(bx[price])
-            fig = px.box(bx, x=bhk, y=price, color=bhk,
-                         title="Price Range by BHK (≤ 4 BHK)", height=420)
-            charts["box_bhk_price"] = json.loads(pio.to_json(fig))
-
-    # 5) Histogram: price by property_type
-    if price and ptype:
-        h = df.dropna(subset=[price, ptype]).copy()
-        if len(h):
-            h[price] = clip99(h[price])
-            fig = px.histogram(h, x=price, color=ptype, nbins=50,
-                               barmode="overlay", opacity=0.65,
-                               title="Price Distribution by Property Type", height=420)
-            charts["hist_price_type"] = json.loads(pio.to_json(fig))
-
-    # 6) Sunburst: property_type → BHK
-    if ptype and bhk:
-        sb = df.dropna(subset=[ptype, bhk]).copy()
-        if len(sb):
-            sb["BHK"] = to_num(sb[bhk]).astype("Int64").astype(str) + " BHK"
-            sb["value"] = 1
-            fig = px.sunburst(sb, path=[ptype, "BHK"], values="value",
-                              title="Composition: Property Type → BHK", height=450)
-            charts["sunburst_type_bhk"] = json.loads(pio.to_json(fig))
-
-    # 7) Top sectors by avg price/sqft
-    if sec and pps:
-        top = df.dropna(subset=[sec, pps]).copy()
-        if len(top):
-            top = top.groupby(sec, as_index=False)[pps].mean().sort_values(pps, ascending=False).head(15)
-            fig = px.bar(top, x=sec, y=pps, title="Top Sectors by Avg Price per Sqft", height=420)
-            fig.update_layout(xaxis_tickangle=-40)
-            charts["bar_top_sectors_pps"] = json.loads(pio.to_json(fig))
-
-    # 8) Correlation heatmap (use provided or compute)
-    df_corr = dfs["corr"]
-    heatmap_df = None
-    if df_corr is not None and df_corr.shape[0] == df_corr.shape[1]:
-        heatmap_df = df_corr
-    else:
-        num_df = df.select_dtypes(include=[np.number])
-        if num_df.shape[1] >= 2:
-            heatmap_df = num_df.corr()
-
-    if heatmap_df is not None and heatmap_df.shape[0] and heatmap_df.shape[1]:
-        fig = px.imshow(heatmap_df, text_auto=False, aspect="auto",
-                        color_continuous_scale="RdBu", title="Correlation Matrix", height=520)
-        charts["heatmap_corr"] = json.loads(pio.to_json(fig))
-
-    return charts
-
-def build_wordcloud_base64() -> Optional[str]:
-    if not WORDCLOUD:
-        return None
-    text = _read_pickle_text_any("feature_text.pkl")
-    if not text:
-        return None
-    from io import BytesIO
-    import matplotlib.pyplot as plt
-    wc = WordCloud(width=1000, height=600, background_color="white").generate(text)
-    buf = BytesIO()
-    plt.figure(figsize=(10,6))
-    plt.imshow(wc, interpolation="bilinear"); plt.axis("off"); plt.tight_layout()
-    plt.savefig(buf, format="png", dpi=140); plt.close()
+def generate_wordcloud_base64(sector_text: str, width: int = 700, height: int = 500) -> str:
+    if not sector_text:
+        sector_text = "No data available"
+    wc = WordCloud(width=width, height=height, background_color="white").generate(sector_text)
+    plt.figure(figsize=(width / 100, height / 100), dpi=100)
+    plt.imshow(wc, interpolation="bilinear")
+    plt.axis("off")
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png", bbox_inches="tight", pad_inches=0.1)
     buf.seek(0)
-    import base64
-    return base64.b64encode(buf.read()).decode("utf-8")
-
-# --------- quick debug helper ----------
-def debug_check():
-    print("Project root:", PROJECT_ROOT)
-    print("Search exports in:")
-    for p in EXPORTS_CANDIDATES:
-        print(" -", p, "exists:", p.exists())
-    dfs = load_dataframes()
-    for k, v in dfs.items():
-        print(f"{k}: exists={v is not None}", "shape=" + (str(v.shape) if isinstance(v, pd.DataFrame) else "N/A"))
-        if isinstance(v, pd.DataFrame):
-            print("  columns:", list(v.columns)[:20])
+    img_data = base64.b64encode(buf.read()).decode("utf-8")
+    buf.close()
+    plt.close()
+    return img_data
