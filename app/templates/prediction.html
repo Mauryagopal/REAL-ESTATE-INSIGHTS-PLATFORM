@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+  <h2>🏠 Price Prediction</h2>
+  <form method="POST" class="mt-4">
+    <div class="form-group mb-3">
+      <label>Bedrooms:</label>
+      <input type="number" name="bedRoom" class="form-control" required>
+    </div>
+    <div class="form-group mb-3">
+      <label>Bathrooms:</label>
+      <input type="number" name="bathroom" class="form-control" required>
+    </div>
+    <div class="form-group mb-3">
+      <label>Built Up Area (sq ft):</label>
+      <input type="number" name="built_up_area" class="form-control" required>
+    </div>
+    <button class="btn btn-primary">Predict</button>
+  </form>
+
+  {% if prediction %}
+  <div class="alert alert-success mt-4">
+    💰 Predicted Price: ₹{{ prediction }} Lakhs
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
