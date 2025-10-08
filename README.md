@@ -4,6 +4,7 @@
 ```
 ├── Dataset
 │   ├── appartments.csv
+│   ├── data_viz1.csv
 │   ├── flats.csv
 │   ├── flats_cleaned.csv
 │   ├── gurgaon_properties.csv
@@ -14,7 +15,8 @@
 │   ├── gurgaon_properties_post_feature_selection.csv
 │   ├── gurgaon_properties_post_feature_selection_v2.csv
 │   ├── house_cleaned.csv
-│   └── houses.csv
+│   ├── houses.csv
+│   └── latlong.csv
 ├── Notebooks
 │   ├── Data_Cleaning_files
 │   │   ├── data-preprocessing-flats.ipynb
@@ -26,6 +28,7 @@
 │   │   ├── eda-pandas-profiling.ipynb
 │   │   └── eda-univariate-analysis.ipynb
 │   ├── Feature_Engineering_files
+│   │   ├── data-visualization.ipynb
 │   │   ├── feature-engineering.ipynb
 │   │   ├── feature-selection-and-feature-engineering.ipynb
 │   │   └── feature-selection.ipynb
@@ -34,6 +37,13 @@
 │   │   ├── final_model.ipynb
 │   │   ├── hyperparameter_tunning.ipynb
 │   │   └── model-selection.ipynb
+│   ├── app
+│   │   └── static
+│   │       └── exports
+│   │           ├── correlation_matrix.csv
+│   │           ├── feature_text.pkl
+│   │           ├── gurgaon_cleaned_data.csv
+│   │           └── sector_summary.csv
 │   └── outliers_and_Missing_Value_Handle
 │       ├── missing-value-imputation.ipynb
 │       └── outlier-treatment.ipynb
@@ -41,6 +51,7 @@
 ├── Saved_Model
 │   ├── expected_columns.json
 │   ├── expected_columns_with_examples.json
+│   ├── feature_text.pkl
 │   └── gurgaon_price_model.joblib
 ├── app
 │   ├── __init__.py
@@ -66,6 +77,7 @@
 │   │   ├── prediction.html
 │   │   └── recommendation.html
 │   └── utils
+│       ├── analytics_loader.py
 │       ├── data_helper.py
 │       ├── model_loader.py
 │       └── recommendation_engine.py

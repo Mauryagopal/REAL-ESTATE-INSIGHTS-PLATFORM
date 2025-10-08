@@ -1,7 +1,92 @@
 {% extends "base.html" %}
+{% block title %}Analytics | Gurgaon Realty AI{% endblock %}
+
 {% block content %}
-<div class="container mt-5 text-center">
-    <h2>📊 Analytics Dashboard</h2>
-    <p>Charts and visualizations of property trends will go here.</p>
+<link rel="preload" as="script" href="https://cdn.plot.ly/plotly-2.27.0.min.js">
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<div class="row g-4">
+
+  <div class="col-12">
+    <div class="chart-card p-3">
+      <h4 class="mb-3"><i class="bi bi-geo-alt-fill text-primary me-2"></i>Sector Map: Avg Price per Sqft</h4>
+      <div id="map_sector" style="height:520px;"></div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="chart-card p-3">
+      <h5 class="mb-2">Built-up Area vs Price (BHK colored)</h5>
+      <div id="scatter_area_price"></div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="chart-card p-3">
+      <h5 class="mb-2">BHK Distribution</h5>
+      <div id="pie_bhk"></div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="chart-card p-3">
+      <h5 class="mb-2">Price Range by BHK (≤ 4 BHK)</h5>
+      <div id="box_bhk_price"></div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="chart-card p-3">
+      <h5 class="mb-2">Price Distribution by Property Type</h5>
+      <div id="hist_price_type"></div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="chart-card p-3">
+      <h5 class="mb-2">Composition: Property Type → BHK</h5>
+      <div id="sunburst_type_bhk"></div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="chart-card p-3">
+      <h5 class="mb-2">Top Sectors by Avg Price per Sqft</h5>
+      <div id="bar_top_sectors_pps"></div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="chart-card p-3">
+      <h5 class="mb-2">Correlation Matrix</h5>
+      <div id="heatmap_corr"></div>
+    </div>
+  </div>
+
+  {% if wc_b64 %}
+  <div class="col-12">
+    <div class="chart-card p-3">
+      <h5 class="mb-2">Most Common Features (Wordcloud)</h5>
+      <img src="data:image/png;base64,{{ wc_b64 }}" class="img-fluid rounded" alt="Wordcloud">
+    </div>
+  </div>
+  {% endif %}
+
 </div>
+
+<script>
+  const charts = {{ charts|tojson|safe }};
+
+  function render(id){
+    if(charts[id]){
+      Plotly.newPlot(id, charts[id].data, charts[id].layout || {}, {responsive: true});
+    } else {
+      const el = document.getElementById(id);
+      if(el) el.innerHTML = '<div class="text-muted">Chart not available.</div>';
+    }
+  }
+
+  ["map_sector","scatter_area_price","pie_bhk","box_bhk_price","hist_price_type",
+   "sunburst_type_bhk","bar_top_sectors_pps","heatmap_corr"].forEach(render);
+</script>
 {% endblock %}
