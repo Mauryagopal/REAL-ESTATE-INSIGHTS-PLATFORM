@@ -12,6 +12,7 @@
 │   ├── gurgaon_properties_missing_value_imputation.csv
 │   ├── gurgaon_properties_outlier_treated.csv
 │   ├── gurgaon_properties_post_feature_selection.csv
+│   ├── gurgaon_properties_post_feature_selection_v2.csv
 │   ├── house_cleaned.csv
 │   └── houses.csv
 ├── Notebooks
@@ -29,10 +30,16 @@
 │   │   ├── feature-selection-and-feature-engineering.ipynb
 │   │   └── feature-selection.ipynb
 │   ├── Model_building
-│   │   └── baseline model.ipynb
+│   │   ├── baseline model.ipynb
+│   │   ├── final_model.ipynb
+│   │   ├── hyperparameter_tunning.ipynb
+│   │   └── model-selection.ipynb
 │   └── outliers_and_Missing_Value_Handle
 │       ├── missing-value-imputation.ipynb
 │       └── outlier-treatment.ipynb
 ├── README.md
+├── Saved_Model
+│   ├── expected_columns.json
+│   └── gurgaon_price_model.joblib
 └── generate_tree.py
 ```
