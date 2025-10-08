@@ -1,13 +1,16 @@
 {% extends "base.html" %}
+{% block title %}Home | Real Estate Platform{% endblock %}
+
 {% block content %}
 <div class="container text-center mt-5">
-    <h1>🏙️ Real Estate Insights Platform</h1>
-    <p>Choose a module to explore:</p>
-    <div class="btn-group mt-4">
-        <a href="/prediction" class="btn btn-primary">Price Prediction</a>
-        <a href="/recommendation" class="btn btn-secondary">Property Recommendation</a>
-        <a href="/analytics" class="btn btn-success">Analytics Dashboard</a>
-        <a href="/insights" class="btn btn-info">Insights Module</a>
-    </div>
+  <h2 class="mb-3">🏙️ Real Estate Insights Platform</h2>
+  <p class="text-muted">Explore property data, predictions, and insights for Gurgaon.</p>
+
+  <div class="mt-4 d-flex justify-content-center gap-3">
+    <a href="/prediction" class="btn btn-primary">🏠 Price Predictor</a>
+    <a href="/recommendation" class="btn btn-outline-secondary">🏡 Recommendations</a>
+    <a href="/analytics" class="btn btn-outline-success">📊 Analytics</a>
+    <a href="/insights" class="btn btn-outline-info">💡 Insights</a>
+  </div>
 </div>
 {% endblock %}

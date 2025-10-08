@@ -1,23 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Real Estate Insights</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Real Estate Platform{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet" />
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3">
-        <a class="navbar-brand" href="/">🏙️ Real Estate Platform</a>
-        <div class="navbar-nav ms-auto">
-            <a class="nav-link" href="/prediction">Prediction</a>
-            <a class="nav-link" href="/recommendation">Recommendation</a>
-            <a class="nav-link" href="/analytics">Analytics</a>
-            <a class="nav-link" href="/insights">Insights</a>
-        </div>
-    </nav>
-    <div class="content">
-        {% block content %}{% endblock %}
+  <div class="main-layout d-flex">
+    <!-- Sidebar -->
+    <div class="sidebar bg-light p-4">
+      <h5 class="fw-bold mb-4">Menu</h5>
+      <a href="/" class="btn btn-sidebar active"><span>🏠</span> Price Predictor</a>
+      <a href="/recommendation" class="btn btn-sidebar"><span>🏡</span> Recommendation</a>
+      <a href="/analytics" class="btn btn-sidebar"><span>📊</span> Analytics</a>
+      <a href="/insights" class="btn btn-sidebar"><span>📌</span> Insights</a>
     </div>
+
+    <!-- Content -->
+    <div class="content flex-grow-1 p-4">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
 </body>
 </html>

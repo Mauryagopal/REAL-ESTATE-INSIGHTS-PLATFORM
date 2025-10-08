@@ -41,5 +41,35 @@
 ├── Saved_Model
 │   ├── expected_columns.json
 │   └── gurgaon_price_model.joblib
-└── generate_tree.py
+├── app
+│   ├── __init__.py
+│   ├── config.py
+│   ├── routes
+│   │   ├── __init__.py
+│   │   ├── analytics_routes.py
+│   │   ├── home_routes.py
+│   │   ├── insights_routes.py
+│   │   ├── prediction_routes.py
+│   │   └── recommendation_routes.py
+│   ├── static
+│   │   ├── css
+│   │   │   └── style.css
+│   │   ├── images
+│   │   └── js
+│   │       └── main.js
+│   ├── templates
+│   │   ├── analytics.html
+│   │   ├── base.html
+│   │   ├── home.html
+│   │   ├── insights.html
+│   │   ├── prediction.html
+│   │   └── recommendation.html
+│   └── utils
+│       ├── data_helper.py
+│       ├── model_loader.py
+│       └── recommendation_engine.py
+├── create_flask_structure.py
+├── generate_tree.py
+├── requirements.txt
+└── run.py
 ```

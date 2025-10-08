@@ -1,27 +1,95 @@
 {% extends "base.html" %}
-{% block content %}
-<div class="container mt-5">
-  <h2>🏠 Price Prediction</h2>
-  <form method="POST" class="mt-4">
-    <div class="form-group mb-3">
-      <label>Bedrooms:</label>
-      <input type="number" name="bedRoom" class="form-control" required>
-    </div>
-    <div class="form-group mb-3">
-      <label>Bathrooms:</label>
-      <input type="number" name="bathroom" class="form-control" required>
-    </div>
-    <div class="form-group mb-3">
-      <label>Built Up Area (sq ft):</label>
-      <input type="number" name="built_up_area" class="form-control" required>
-    </div>
-    <button class="btn btn-primary">Predict</button>
-  </form>
+{% block title %}Prediction | Real Estate Platform{% endblock %}
 
-  {% if prediction %}
-  <div class="alert alert-success mt-4">
-    💰 Predicted Price: ₹{{ prediction }} Lakhs
+{% block content %}
+<div class="container-fluid px-5">
+  <div class="card prediction-card mx-auto mt-5 p-4 shadow-sm">
+    <h3 class="text-center mb-4">🏠 House Price Prediction</h3>
+    <form method="POST">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Property Type:</label>
+          <input type="text" name="property_type" class="form-control" placeholder="flat" required />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Sector:</label>
+          <input type="text" name="sector" class="form-control" placeholder="dwarka expressway" required />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Bedrooms:</label>
+          <input type="number" name="bedRoom" class="form-control" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Bathrooms:</label>
+          <input type="number" name="bathroom" class="form-control" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Balcony:</label>
+          <input type="number" name="balcony" class="form-control" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Age of Property:</label>
+          <select name="agePossession" class="form-select">
+            <option>New Property</option>
+            <option>0-1 Year Old Property</option>
+            <option>1-5 Year Old Property</option>
+            <option>5-10 Year Old Property</option>
+            <option>10+ Year Old Property</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Built-up Area (sq.ft):</label>
+          <input type="number" name="built_up_area" class="form-control" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Servant Room:</label>
+          <select name="servant room" class="form-select">
+            <option>No</option>
+            <option>Yes</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Store Room:</label>
+          <select name="store room" class="form-select">
+            <option>No</option>
+            <option>Yes</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Furnishing Type:</label>
+          <select name="furnishing_type" class="form-select">
+            <option>unfurnished</option>
+            <option>semifurnished</option>
+            <option>furnished</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Luxury Category:</label>
+          <select name="luxury_category" class="form-select">
+            <option>Low</option>
+            <option>Mid</option>
+            <option>High</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Floor Category:</label>
+          <select name="floor_category" class="form-select">
+            <option>Low Floor</option>
+            <option>Mid Floor</option>
+            <option>High Floor</option>
+          </select>
+        </div>
+      </div>
+      <div class="text-center mt-4">
+        <button class="btn btn-success px-5 py-2">Predict Price</button>
+      </div>
+    </form>
+
+    {% if prediction %}
+    <div class="alert alert-success mt-4 text-center">
+      💰 Predicted Price: ₹{{ prediction | round(2) }} Lakhs
+    </div>
+    {% endif %}
   </div>
-  {% endif %}
 </div>
 {% endblock %}
