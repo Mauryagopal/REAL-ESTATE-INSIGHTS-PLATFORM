@@ -37,9 +37,8 @@
 │   │   ├── final_model.ipynb
 │   │   ├── hyperparameter_tunning.ipynb
 │   │   └── model-selection.ipynb
-│   ├── app
-│   │   └── static
-│   │       └── exports
+│   ├── Recommender_System
+│   │   └── recommender-system.ipynb
 │   └── outliers_and_Missing_Value_Handle
 │       ├── missing-value-imputation.ipynb
 │       └── outlier-treatment.ipynb
