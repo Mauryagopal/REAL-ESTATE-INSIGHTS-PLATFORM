@@ -40,6 +40,7 @@
 ├── README.md
 ├── Saved_Model
 │   ├── expected_columns.json
+│   ├── expected_columns_with_examples.json
 │   └── gurgaon_price_model.joblib
 ├── app
 │   ├── __init__.py
