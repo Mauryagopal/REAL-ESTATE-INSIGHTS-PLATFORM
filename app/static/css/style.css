@@ -48,7 +48,76 @@ main.container { max-width: 1100px; }
   border-radius: 16px;
   backdrop-filter: blur(8px);
   color: #e2e8f0;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
 }
 
 .card-result .display-5 { color: var(--accent); }
-.footer { background: #0b1220; border-top: 1px solid rgba(255,255,255,0.08); color: var(--text-muted); }
+
+.form-control, .form-select {
+  background: rgba(255,255,255,0.95);
+  border-radius: 10px;
+}
+
+.footer {
+  background: #0b1220;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  color: var(--text-muted);
+}
+
+/* ===== Contrast fixes for forms and result cards ===== */
+.card-glass, .card-result {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 16px;
+  color: #0f172a !important;       /* high-contrast text */
+  box-shadow: 0 8px 28px rgba(2, 6, 23, 0.08);
+  backdrop-filter: none !important; /* remove glass blur on light bg */
+}
+
+/* Headings and labels inside the card */
+.card-glass h3, .card-glass .form-label,
+.card-result h4, .card-result .card-title {
+  color: #0f172a !important;
+  font-weight: 600;
+}
+
+/* Inputs and selects */
+.form-control, .form-select {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 10px;
+}
+.form-control::placeholder {
+  color: #6b7280;
+  opacity: 1;
+}
+.form-control:focus, .form-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 .2rem rgba(108,99,255,.15);
+}
+
+/* Select dropdown options (some browsers inherit the light text) */
+.form-select option {
+  color: #0f172a;
+  background: #ffffff;
+}
+.form-select option:checked {
+  background: #eef2ff;
+}
+
+/* Result number emphasis */
+.card-result .display-5 {
+  color: var(--accent) !important;
+}
+
+/* Keep the nice green button visible on white cards */
+.btn-hero {
+  background: var(--accent);
+  color: #071b1a;
+  font-weight: 600;
+}
+.btn-hero:hover { background: #00a584; color: #fff; }
+
+/* Optional: lighten page background slightly for depth */
+body { background-color: #f7f9fb; }

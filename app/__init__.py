@@ -1,15 +1,15 @@
+# app/__init__.py
 from flask import Flask
-from .routes.home_routes import home_bp
-from .routes.prediction_routes import prediction_bp
-from .routes.recommendation_routes import recommendation_bp
-from .routes.analytics_routes import analytics_bp
-from .routes.insights_routes import insights_bp
+from .config import Config
 
 def create_app():
     app = Flask(__name__)
+    app.config.from_object(Config)
+
+    # Register blueprints
+    from .routes.home_routes import home_bp
+    from .routes.prediction_routes import prediction_bp
     app.register_blueprint(home_bp)
-    app.register_blueprint(prediction_bp, url_prefix="/prediction")
-    app.register_blueprint(recommendation_bp, url_prefix="/recommendation")
-    app.register_blueprint(analytics_bp, url_prefix="/analytics")
-    app.register_blueprint(insights_bp, url_prefix="/insights")
+    app.register_blueprint(prediction_bp)
+
     return app

@@ -10,92 +10,101 @@
 
         <div class="col-md-4">
           <label class="form-label">Bedrooms</label>
-          <input type="number" name="bedRoom" class="form-control" min="1" step="1" required>
+          <input type="number" name="bedRoom" class="form-control"
+                 min="{{ hints.bedRoom.min }}" max="{{ hints.bedRoom.max }}" step="{{ hints.bedRoom.step }}"
+                 value="{{ form_state.bedRoom }}" required>
         </div>
 
         <div class="col-md-4">
           <label class="form-label">Bathrooms</label>
-          <input type="number" name="bathroom" class="form-control" min="1" step="1" required>
+          <input type="number" name="bathroom" class="form-control"
+                 min="{{ hints.bathroom.min }}" max="{{ hints.bathroom.max }}" step="{{ hints.bathroom.step }}"
+                 value="{{ form_state.bathroom }}" required>
         </div>
 
         <div class="col-md-4">
-          <label class="form-label">Built Up Area (sqft)</label>
-          <input type="number" name="built_up_area" class="form-control" min="100" step="1" required>
+          <label class="form-label">Area (sqft)</label>
+          <input type="number" name="built_up_area" class="form-control"
+                 min="{{ hints.built_up_area.min }}" max="{{ hints.built_up_area.max }}" step="{{ hints.built_up_area.step }}"
+                 value="{{ form_state.built_up_area }}" required>
         </div>
 
         <div class="col-md-6">
           <label class="form-label">Servant Room</label>
-          <input type="number" name="servant_room" class="form-control" min="0" step="1" value="0">
+          <input type="number" name="servant_room" class="form-control"
+                 min="{{ hints.servant_room.min }}" max="{{ hints.servant_room.max }}" step="{{ hints.servant_room.step }}"
+                 value="{{ form_state.servant_room or 0 }}">
         </div>
 
         <div class="col-md-6">
           <label class="form-label">Store Room</label>
-          <input type="number" name="store_room" class="form-control" min="0" step="1" value="0">
+          <input type="number" name="store_room" class="form-control"
+                 min="{{ hints.store_room.min }}" max="{{ hints.store_room.max }}" step="{{ hints.store_room.step }}"
+                 value="{{ form_state.store_room or 0 }}">
         </div>
 
         <div class="col-md-6">
           <label class="form-label">Property Type</label>
           <select name="property_type" class="form-select">
-            <option>Apartment</option>
-            <option>Independent House</option>
-            <option>Builder Floor</option>
-            <option>Villa</option>
-            <option>Penthouse</option>
-            <option>Plot</option>
+            {% for opt in choices.property_type %}
+              <option value="{{ opt }}" {% if form_state.property_type==opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
           </select>
         </div>
 
         <div class="col-md-6">
           <label class="form-label">Sector</label>
-          <input type="text" name="sector" class="form-control" placeholder="e.g., Sector 56" required>
+          <input type="text" name="sector" class="form-control" list="sectorList"
+                 placeholder="e.g., Sector 56" value="{{ form_state.sector }}" required>
+          <datalist id="sectorList">
+            {% for opt in choices.sector %}
+              <option value="{{ opt }}"></option>
+            {% endfor %}
+          </datalist>
         </div>
 
         <div class="col-md-6">
           <label class="form-label">Balcony</label>
           <select name="balcony" class="form-select">
-            <option>yes</option>
-            <option>no</option>
+            {% for opt in choices.balcony %}
+              <option value="{{ opt }}" {% if form_state.balcony==opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
           </select>
         </div>
 
         <div class="col-md-6">
           <label class="form-label">Age / Possession</label>
           <select name="agePossession" class="form-select">
-            <option>Ready to Move</option>
-            <option>Under Construction</option>
-            <option>0-1 Year Old Property</option>
-            <option>1-5 Year Old Property</option>
-            <option>5-10 Year Old Property</option>
-            <option>New Launch</option>
+            {% for opt in choices.agePossession %}
+              <option value="{{ opt }}" {% if form_state.agePossession==opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
           </select>
         </div>
 
         <div class="col-md-6">
           <label class="form-label">Furnishing</label>
           <select name="furnishing_type" class="form-select">
-            <option>unfurnished</option>
-            <option>semifurnished</option>
-            <option>furnished</option>
+            {% for opt in choices.furnishing_type %}
+              <option value="{{ opt }}" {% if form_state.furnishing_type==opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
           </select>
         </div>
 
         <div class="col-md-6">
           <label class="form-label">Luxury Category</label>
           <select name="luxury_category" class="form-select">
-            <option>budget</option>
-            <option>mid</option>
-            <option>luxury</option>
-            <option>ultra</option>
+            {% for opt in choices.luxury_category %}
+              <option value="{{ opt }}" {% if form_state.luxury_category==opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
           </select>
         </div>
 
         <div class="col-md-6">
           <label class="form-label">Floor Category</label>
           <select name="floor_category" class="form-select">
-            <option>low</option>
-            <option>mid</option>
-            <option>high</option>
-            <option>ground</option>
+            {% for opt in choices.floor_category %}
+              <option value="{{ opt }}" {% if form_state.floor_category==opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
           </select>
         </div>
 

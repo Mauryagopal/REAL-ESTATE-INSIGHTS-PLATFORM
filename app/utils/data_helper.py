@@ -1,10 +1,9 @@
-import json
 import pandas as pd
-from flask import current_app
-from .model_loader import get_expected_columns
+from typing import Tuple, Dict, Any, List
 
-# UI fields -> dataset column names
-# Note: dataset uses "servant room"/"store room" with spaces, so we map UI -> dataset
+from .model_loader import get_expected_columns, get_allowed_values, get_numeric_hints
+
+# UI fields (strict) — matches your model schema
 ALLOWED_FIELDS = [
     "bedRoom", "bathroom", "built_up_area", "servant_room", "store_room",
     "property_type", "sector", "balcony", "agePossession",
@@ -12,20 +11,20 @@ ALLOWED_FIELDS = [
 ]
 
 NUMERIC_FIELDS = ["bedRoom", "bathroom", "built_up_area", "servant_room", "store_room"]
-TEXT_FIELDS = [
+CATEGORICAL_FIELDS = [
     "property_type", "sector", "balcony", "agePossession",
     "furnishing_type", "luxury_category", "floor_category"
 ]
 
-def ensure_schema_compatibility():
-    expected = get_expected_columns()
+def ensure_schema_compatibility() -> None:
+    expected = set(get_expected_columns())
     required = {"bedRoom","bathroom","built_up_area","servant room","store room",
-                "property_type","sector","balcony","agePossession","furnishing_type",
-                "luxury_category","floor_category"}
-    missing = sorted(list(required - set(expected)))
+                "property_type","sector","balcony","agePossession",
+                "furnishing_type","luxury_category","floor_category"}
+    missing = sorted(list(required - expected))
     if missing:
         raise RuntimeError(f"Model is missing required columns: {missing}. "
-                           "Share expected_columns.json so we can update the form/schema.")
+                           "Adjust the form or update expected_columns.json.")
 
 def _coerce_numeric(val, default=0):
     if val is None or str(val).strip() == "":
@@ -36,40 +35,52 @@ def _coerce_numeric(val, default=0):
     except Exception:
         return default
 
-def form_to_dataframe(form_data: dict) -> pd.DataFrame:
-    # Take only allowed fields
-    clean = {k: form_data.get(k, "") for k in ALLOWED_FIELDS}
+def validate_and_prepare(form_data: Dict[str, Any]) -> Tuple[pd.DataFrame, List[str], Dict[str, Any]]:
+    allowed = get_allowed_values()
+    hints = get_numeric_hints()
+    errors: List[str] = []
 
-    # Coerce numerics
-    for k in NUMERIC_FIELDS:
-        clean[k] = _coerce_numeric(clean.get(k))
+    # Keep only allowed fields
+    clean: Dict[str, Any] = {k: form_data.get(k, "") for k in ALLOWED_FIELDS}
 
-    # Normalize text
-    for k in TEXT_FIELDS:
-        clean[k] = str(clean.get(k, "")).strip()
+    # Validate numerics
+    for f in NUMERIC_FIELDS:
+        v = _coerce_numeric(clean.get(f))
+        lim = hints.get(f, {})
+        vmin, vmax = lim.get("min", None), lim.get("max", None)
+        if vmin is not None and v < vmin:
+            errors.append(f"{f} must be >= {vmin}")
+        if vmax is not None and v > vmax:
+            errors.append(f"{f} must be <= {vmax}")
+        clean[f] = v
 
-    # Map UI keys to dataset column names with spaces
+    # Validate categoricals
+    for f in CATEGORICAL_FIELDS:
+        val = str(clean.get(f, "")).strip()
+        choices = allowed.get(f, [])
+        if choices and val not in choices:
+            errors.append(f"{f} must be one of: {', '.join(choices[:8])}{'...' if len(choices)>8 else ''}")
+        clean[f] = val
+
+    # Map to training schema (spaces)
     clean["servant room"] = clean.pop("servant_room")
     clean["store room"] = clean.pop("store_room")
 
-    df = pd.DataFrame([clean])
-    expected_cols = get_expected_columns()
-    # Only keep columns that model expects, and add any missing (as NaN)
-    df = df.reindex(columns=expected_cols)
-    return df
+    # Build dataframe in model’s expected order
+    df = pd.DataFrame([clean]).reindex(columns=get_expected_columns())
+    return df, errors, clean
 
 def convert_crore_to_inr(value_in_crore: float) -> float:
     return float(value_in_crore) * 1e7
 
-def format_price(amount_in_inr: float) -> dict:
-    # Pretty display + breakdown
+def format_price(amount_in_inr: float) -> Dict[str, str]:
+    # Compact main + breakdown
     if amount_in_inr >= 1e7:
         main = f"₹{amount_in_inr / 1e7:.2f} Cr"
     elif amount_in_inr >= 1e5:
         main = f"₹{amount_in_inr / 1e5:.2f} Lakh"
     else:
         main = f"₹{amount_in_inr:,.0f}"
-
     return {
         "main": main,
         "inr": f"₹{amount_in_inr:,.0f}",
